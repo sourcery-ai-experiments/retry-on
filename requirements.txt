@@ -1,0 +1,8 @@
+httpx==0.27.0
+marvin==0.1.dev1+g8ee6b7c
+marvin.egg==info
+memory_profiler==0.61.0
+openai==1.14.3
+pytest==7.3.2
+rich==13.7.1
+typing_extensions==4.10.0
