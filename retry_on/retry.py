@@ -18,7 +18,7 @@ from typing import (
     Union,
 )
 
-from src.utilities.logging import get_logger, logging
+from retry_on.utilities.logging import get_logger, logging
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -669,7 +669,7 @@ class RetryStrategy:
         )
 
 
-def retry_on_exception(exceptions: Union[Type[E], Tuple[Type[E], ...]], **kwargs: Any) -> Callable:
+def retry_on(exceptions: Union[Type[E], Tuple[Type[E], ...]], **kwargs: Any) -> Callable:
     def _validate_exceptions(exc: Type[E]) -> None:
         if not issubclass(exc, Exception):
             raise ValueError("exception must subclass Exception")

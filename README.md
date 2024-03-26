@@ -14,14 +14,14 @@ This library offers sophisticated retry logic for both asynchronous and synchron
 ## Installation
 
 ```bash
-pip install retry_on
+pip install retry-on
 ```
 
 ## Usage
 
 ### Basic Usage
 
-To use the retry mechanism, decorate your function with `@retry_on_exception` and specify the exceptions to retry on, along with any configuration parameters.
+To use the retry mechanism, decorate your function with `@retry_on` and specify the exceptions to retry on, along with any configuration parameters.
 
 ```python
 from retry_on import retry_on_exception as retry

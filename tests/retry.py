@@ -1,10 +1,6 @@
 import asyncio
-import gc
-import inspect
 import io
-import random
 import threading
-from ast import Dict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from typing import (
@@ -13,23 +9,22 @@ from typing import (
     Callable,
     Coroutine,
     Generator,
-    List,
     NoReturn,
     Optional,
     Union,
 )
-from unittest.mock import ANY, AsyncMock, MagicMock, create_autospec, patch
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
 from httpx import Request, Response
-from memory_profiler import memory_usage
+# from memory_profiler import memory_usage
 from openai import APIError, APITimeoutError, RateLimitError
 from typing_extensions import Literal
 
-from marvin.utilities.logging import logging
-from marvin.utilities.retry import E, R, RetryConfig, RetryContext, SharedSemaphore
-from marvin.utilities.retry import logger as retry_logger
-from marvin.utilities.retry import retry_on_exception as retry
+from retry_on.utilities.logging import logging
+from retry_on.retry import RetryConfig, RetryContext, SharedSemaphore
+from retry_on.retry import logger as retry_logger
+from retry_on.retry import retry_on as retry
 
 
 class ExceptionSimulator:
