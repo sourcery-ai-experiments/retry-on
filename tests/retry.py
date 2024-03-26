@@ -24,7 +24,7 @@ from typing_extensions import Literal
 from retry_on.utilities.logging import logging
 from retry_on.retry import RetryConfig, RetryContext, SharedSemaphore
 from retry_on.retry import logger as retry_logger
-from retry_on.retry import retry_on as retry
+from retry_on.retry import retry
 
 
 class ExceptionSimulator:

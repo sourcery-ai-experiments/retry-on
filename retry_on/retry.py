@@ -17,6 +17,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from types import TracebackType
 
 from retry_on.utilities.logging import get_logger, logging
 
@@ -27,7 +28,12 @@ E = TypeVar("E", bound=Exception)  # Exception type
 
 
 class RetryConfig:
-    SUPPORTED_PATTERNS: list[str] = ["controlled_flow", "fixed", "exponential", "custom_sequence"]
+    SUPPORTED_PATTERNS: list[str] = [
+        "controlled_flow",
+        "fixed",
+        "exponential",
+        "custom_sequence",
+    ]
 
     def __init__(self, **kwargs: Any) -> None:
         self._max_retries: int = kwargs.get("max_retries", 3)
@@ -48,7 +54,9 @@ class RetryConfig:
             if isinstance(kwargs.get("rate_limit", 0.5), Union[int, float])
             else None
         )
-        self._retry_pattern: str = kwargs.get("retry_pattern", "controlled_flow")
+        self._retry_pattern: str = kwargs.get(
+            "retry_pattern", "controlled_flow"
+        )
         self._fixed_delay: float = float(kwargs.get("fixed_delay", 5.0))
         self._custom_sequence: Optional[List[float]] = (
             [
@@ -62,7 +70,9 @@ class RetryConfig:
         self._log_level: int = kwargs.get("log_level", logging.WARNING)
         self._concurrency_limit: Optional[int] = (
             int(kwargs.get("concurrency_limit", None))
-            if isinstance(kwargs.get("concurrency_limit", None), Union[int, float])
+            if isinstance(
+                kwargs.get("concurrency_limit", None), Union[int, float]
+            )
             else None
         )
         self._on_retry_callback: Optional[Callable[[Any, Exception], Any]] = (
@@ -72,12 +82,16 @@ class RetryConfig:
         )
         self._function_timeout: Optional[float] = (
             float(kwargs.get("function_timeout", None))
-            if isinstance(kwargs.get("function_timeout", None), Union[int, float])
+            if isinstance(
+                kwargs.get("function_timeout", None), Union[int, float]
+            )
             else None
         )
         self._callback_timeout: Optional[float] = (
             float(kwargs.get("callback_timeout", None))
-            if isinstance(kwargs.get("callback_timeout", None), Union[int, float])
+            if isinstance(
+                kwargs.get("callback_timeout", None), Union[int, float]
+            )
             else None
         )
 
@@ -190,9 +204,12 @@ class RetryConfig:
     @custom_sequence.setter
     def custom_sequence(self, value: Optional[List[float]]) -> None:
         if value is not None and (
-            not isinstance(value, list) or not all(isinstance(n, (float, int)) for n in value)
+            not isinstance(value, list)
+            or not all(isinstance(n, (float, int)) for n in value)
         ):
-            raise ValueError("custom_sequence must be a list or tuple if specified")
+            raise ValueError(
+                "custom_sequence must be a list or tuple if specified"
+            )
         self._custom_sequence = value
 
     @property
@@ -248,20 +265,38 @@ class RetryConfig:
             raise ValueError(
                 "custom_sequence must be empty if retry_pattern is not custom_sequence"
             )
-        if self._retry_pattern == "custom_sequence" and self._custom_sequence is None:
-            raise ValueError("custom_sequence must be provided for custom_sequence retry pattern")
-        if self.retry_pattern == "controlled_flow" and self.burst_capacity is None:
-            raise ValueError("burst_capacity must be provided for controlled_flow retry pattern")
+        if (
+            self._retry_pattern == "custom_sequence"
+            and self._custom_sequence is None
+        ):
+            raise ValueError(
+                "custom_sequence must be provided for custom_sequence retry pattern"
+            )
+        if (
+            self.retry_pattern == "controlled_flow"
+            and self.burst_capacity is None
+        ):
+            raise ValueError(
+                "burst_capacity must be provided for controlled_flow retry pattern"
+            )
         if self.retry_pattern == "controlled_flow" and self.rate_limit is None:
-            raise ValueError("rate_limit must be provided for controlled_flow retry pattern")
+            raise ValueError(
+                "rate_limit must be provided for controlled_flow retry pattern"
+            )
         if self.retry_pattern == "fixed" and self.fixed_delay is None:
-            raise ValueError("fixed_delay must be provided for fixed retry pattern")
+            raise ValueError(
+                "fixed_delay must be provided for fixed retry pattern"
+            )
 
 
 class SharedSemaphore:
     def __init__(self, max_workers: int = 10):
-        self._async_semaphore: asyncio.Semaphore = asyncio.Semaphore(max_workers)
-        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=max_workers)
+        self._async_semaphore: asyncio.Semaphore = asyncio.Semaphore(
+            max_workers
+        )
+        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(
+            max_workers=max_workers
+        )
 
     @contextmanager
     def executor_context(self) -> Generator[Any, Any, Any]:
@@ -295,7 +330,11 @@ class TaskManager:
         self.tasks: List[Union[asyncio.Task, Future]] = []
 
     async def submit_async_task(
-        self, func: Callable[..., Any], timeout: Optional[float] = None, *args: Any, **kwargs: Any
+        self,
+        func: Callable[..., Any],
+        timeout: Optional[float] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> asyncio.Task:
         if self.shared_semaphore:
             async with self.shared_semaphore.async_lock():
@@ -308,8 +347,9 @@ class TaskManager:
                         await task
                 except Exception as task_exception:
                     logger.log(
-                        logging.WARNING,
-                        f"Exception encountered during async task execution. Error: {task_exception.__str__()}.",
+                        logging.WARNING, (
+                            "Exception encountered during async task execution."
+                            f" Error: {task_exception}."),
                     )
                     task.cancel()
                     # raise task_exception
@@ -325,14 +365,18 @@ class TaskManager:
             except Exception as task_exception:
                 logger.log(
                     logging.WARNING,
-                    f"Exception encountered during async task execution. Error: {task_exception.__str__()}.",
+                    f"Exception encountered during async task execution. Error: {task_exception}.",
                 )
                 task.cancel()
                 # raise task_exception
             return task
 
     def submit_sync_task(
-        self, func: Callable[..., Any], timeout: Optional[float] = None, *args: Any, **kwargs: Any
+        self,
+        func: Callable[..., Any],
+        timeout: Optional[float] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> Future:
         with (
             self.shared_semaphore.executor_context()
@@ -347,8 +391,9 @@ class TaskManager:
                 return future
             except Exception as task_exception:
                 logger.log(
-                    logging.WARNING,
-                    f"Exception encountered during sync task execution. Error: {task_exception.__str__()}.",
+                    logging.WARNING, (
+                        "Exception encountered during sync task execution."
+                        f" Error: {task_exception}."),
                 )
                 future.cancel()
                 # raise task_exception
@@ -359,7 +404,10 @@ class TaskManager:
             if isinstance(task, (asyncio.Task, Future)):
                 task.cancel()
             else:
-                logger.log(logging.WARNING, "Unknown task type encountered during cancellation.")
+                logger.log(
+                    logging.WARNING,
+                    "Unknown task type encountered during cancellation.",
+                )
         self.tasks.clear()
 
 
@@ -382,7 +430,12 @@ class RetryContext:
     async def __aenter__(self) -> "RetryContext":
         return self
 
-    async def __aexit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[types.TracebackType]) -> None:
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         self.task_manager.cancel_tasks()
         if self.shared_semaphore:
             self.shared_semaphore.shutdown()
@@ -390,14 +443,21 @@ class RetryContext:
     def __enter__(self) -> "RetryContext":
         return self
 
-    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[types.TracebackType]) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         if exc_type is None:
             logger.log(
-                logging.INFO, f"Function completed successfully after {self.attempt} attempts."
+                logging.INFO,
+                f"Function completed successfully after {self.attempt} attempts.",
             )
         else:
             logger.log(
-                logging.ERROR, f"Function failed after {self.attempt} attempts due to {exc_val}."
+                logging.ERROR,
+                f"Function failed after {self.attempt} attempts due to {exc_val}.",
             )
         self.task_manager.cancel_tasks()
         if self.shared_semaphore:
@@ -405,9 +465,13 @@ class RetryContext:
 
     @staticmethod
     def is_async(func: Callable) -> bool:
-        return asyncio.iscoroutinefunction(func) or inspect.isasyncgenfunction(func)
+        return asyncio.iscoroutinefunction(func) or inspect.isasyncgenfunction(
+            func
+        )
 
-    async def retry_async_call(self, func: Callable[..., R], *args: Any, **kwargs: Any) -> R:
+    async def retry_async_call(
+        self, func: Callable[..., R], *args: Any, **kwargs: Any
+    ) -> R:
         while True:
             try:
                 self.attempt += 1
@@ -418,7 +482,9 @@ class RetryContext:
             except self.exceptions as e:
                 await self.handle_async_retry(e)
 
-    def retry_sync_call(self, func: Callable[..., R], *args: Any, **kwargs: Any) -> R:
+    def retry_sync_call(
+        self, func: Callable[..., R], *args: Any, **kwargs: Any
+    ) -> R:
         while True:
             try:
                 self.attempt += 1
@@ -437,16 +503,27 @@ class RetryContext:
                 callback_message = " Callback function will be skipped for the current attempt."
             if not self._limit_reached():
                 retry_message: str = ", but retrying"
-            logger.log(logging.INFO, f"Task was cancelled{retry_message}.{callback_message}")
+            logger.log(
+                logging.INFO,
+                f"Task was cancelled{retry_message}.{callback_message}",
+            )
         elif isinstance(exception, TimeoutError):
-            logger.log(logging.WARNING, f"Function execution exceeded timeout. Error: {exception}")
+            logger.log(
+                logging.WARNING,
+                f"Function execution exceeded timeout. Error: {exception}",
+            )
         elif isinstance(exception, Exception):
-            logger.log(logging.WARNING, f"Function failed with exception. Error: {exception}")
+            logger.log(
+                logging.WARNING,
+                f"Function failed with exception. Error: {exception}",
+            )
 
         retry_message: str = "."
         if not self._limit_reached():
             delay = self.retry_strategy.get_delay()
-            retry_message = f"; retrying in {delay}s due to exception: {exception}"
+            retry_message = (
+                f"; retrying in {delay}s due to exception: {exception}"
+            )
 
         logger.log(
             self.config.log_level,
@@ -455,17 +532,24 @@ class RetryContext:
         if self.config.on_retry_callback is not None:
             if RetryContext.is_async(self.config.on_retry_callback):
                 # Execute async callback directly
-                await self.execute_callback(self.config.on_retry_callback, exception)
+                await self.execute_callback(
+                    self.config.on_retry_callback, exception
+                )
             else:
                 # Execute sync callback within the async context
                 await asyncio.get_running_loop().run_in_executor(
-                    None, self.execute_callback, self.config.on_retry_callback, exception
+                    None,
+                    self.execute_callback,
+                    self.config.on_retry_callback,
+                    exception,
                 )
 
         if self._limit_reached():
             logger.log(
-                logging.INFO,
-                f"Retries exhausted. Function failed after {self.attempt} attempts due to {exception}.",
+                logging.INFO, (
+                    f"Retries exhausted. Function failed after {self.attempt}"
+                    f" attempts due to {exception}."
+                )
             )
             raise exception
 
@@ -480,16 +564,24 @@ class RetryContext:
                 callback_message = " Callback function will be skipped for the current attempt."
             if not self._limit_reached():
                 retry_message: str = ", but retrying"
-            logger.log(logging.INFO, f"Task was cancelled{retry_message}.{callback_message}")
+            logger.log(
+                logging.INFO,
+                f"Task was cancelled{retry_message}.{callback_message}",
+            )
         elif isinstance(exception, TimeoutError):
             logger.log(logging.WARNING, "Function execution exceeded timeout.")
         elif isinstance(exception, Exception):
-            logger.log(logging.WARNING, f"Function failed with exception. Error: {exception}")
+            logger.log(
+                logging.WARNING,
+                f"Function failed with exception. Error: {exception}",
+            )
 
         retry_message: str = "."
         if not self._limit_reached():
             delay = self.retry_strategy.get_delay()
-            retry_message = f"; retrying in {delay}s due to exception: {exception}"
+            retry_message = (
+                f"; retrying in {delay}s due to exception: {exception}"
+            )
 
         logger.log(
             self.config.log_level,
@@ -518,12 +610,16 @@ class RetryContext:
                     )
             else:
                 # Execute sync callback directly
-                _ = self.execute_callback(self.config.on_retry_callback, exception)
+                _ = self.execute_callback(
+                    self.config.on_retry_callback, exception
+                )
 
         if self._limit_reached():
             logger.log(
-                logging.INFO,
-                f"Retries exhausted. Function failed after {self.attempt} attempts due to {exception}.",
+                logging.INFO, (
+                    f"Retries exhausted. Function failed after {self.attempt}"
+                    f" attempts due to {exception}."
+                )
             )
             raise exception
 
@@ -533,13 +629,15 @@ class RetryContext:
     def _limit_reached(self) -> bool:
         return self.attempt > self.config.max_retries
 
-    async def execute_callback(self, callback: Callable, exception: Exception) -> None:  # type: ignore
+    async def execute_callback(self, callback: Callable, exception: Exception) -> None:
         if callback is None:
             return
         try:
             logger.log(
-                logging.INFO,
-                f"Executing callback function on attempt {self.attempt} due to exception: {exception}",
+                logging.INFO, (
+                    "Executing callback function on attempt "
+                    f"{self.attempt} due to exception: {exception}"
+                )
             )
 
             if RetryContext.is_async(callback):
@@ -565,7 +663,9 @@ class RetryContext:
 
 class RetryStrategy:
     def __init__(
-        self, exceptions: Union[Type[E], Tuple[Type[E], ...]], context: RetryContext
+        self,
+        exceptions: Union[Type[E], Tuple[Type[E], ...]],
+        context: RetryContext,
     ) -> None:
         self.exceptions: Union[Type[E], Tuple[Type[E], ...]] = exceptions
         self.retry_context: RetryContext = context
@@ -578,37 +678,53 @@ class RetryStrategy:
         jitter: float = self.retry_context.config.jitter or 0.0
         initial_delay: float = self.retry_context.config.initial_delay or 0.0
 
-        def default_backoff_values(initial_backoff: float, retry: int = 0) -> list[float]:
+        def default_backoff_values(
+            initial_backoff: float, retry: int = 0
+        ) -> list[float]:
             nonlocal retries
             nonlocal jitter
             if retry >= retries["total"]:
                 return []
             delay: float = initial_backoff * (2**retry)
             jitter_val: float = delay * random.uniform(0, jitter)
-            current_backoff: float = min(delay + jitter_val, self.retry_context.config.max_delay)
+            current_backoff: float = min(
+                delay + jitter_val, self.retry_context.config.max_delay
+            )
             return (
-                [current_backoff] + default_backoff_values(current_backoff, retry + 1)
+                [current_backoff]
+                + default_backoff_values(current_backoff, retry + 1)
                 if retry > 0
-                else [initial_delay] + default_backoff_values(current_backoff, retry + 1)
+                else [initial_delay]
+                + default_backoff_values(current_backoff, retry + 1)
             )
 
         return default_backoff_values(initial_delay)
 
     def controlled_flow(self) -> list[float]:
-        rate_limit: float = self.retry_context.config.rate_limit or 0.0  # 0.5 is a good value
-        burst_capacity: int = self.retry_context.config.burst_capacity or 0  # 3 is a good value
-        jitter_factor: float = self.retry_context.config.jitter or 0.0  # 0.25 is a good value
+        rate_limit: float = (
+            self.retry_context.config.rate_limit or 0.0
+        )  # 0.5 is a good value
+        burst_capacity: int = (
+            self.retry_context.config.burst_capacity or 0
+        )  # 3 is a good value
+        jitter_factor: float = (
+            self.retry_context.config.jitter or 0.0
+        )  # 0.25 is a good value
 
         if rate_limit is not None and burst_capacity is not None:
             refill_rate = 1.0 / rate_limit  # Time to refill one token.
 
             # Utilize burst capacity for initial retries
-            burst_intervals: List[float] = [0] * min(self.retry_context.config.max_retries, burst_capacity)
+            burst_intervals: List[float] = [0] * min(
+                self.retry_context.config.max_retries, burst_capacity
+            )
 
             # Calculate adaptive delays for retries beyond the burst capacity
             adaptive_delays: List[float] = [
                 refill_rate * (i + 1)
-                for i in range(self.retry_context.config.max_retries - burst_capacity)
+                for i in range(
+                    self.retry_context.config.max_retries - burst_capacity
+                )
             ]
 
             # Combine burst intervals with adaptive delays
@@ -616,19 +732,27 @@ class RetryStrategy:
 
             # Apply jitter to all intervals except the initial burst
             for i, interval in enumerate(combined_intervals):
-                if i >= burst_capacity:  # Apply jitter only beyond burst capacity
-                    jitter: float = interval * jitter_factor * (random.random() * 2 - 1)
+                if (
+                    i >= burst_capacity
+                ):  # Apply jitter only beyond burst capacity
+                    jitter: float = (
+                        interval * jitter_factor * (random.random() * 2 - 1)
+                    )
                     combined_intervals[i] = float(
                         max(interval + jitter, 0)
                     )  # Ensure non-negative delay
 
             return combined_intervals
 
-        raise ValueError("Rate limit and burst capacity must be specified for controlled flow.")
+        raise ValueError(
+            "Rate limit and burst capacity must be specified for controlled flow."
+        )
 
     def custom_sequence(self) -> list[float]:
         if self.retry_context.config.custom_sequence is None:
-            raise ValueError("Custom sequence must be specified for custom sequence retry pattern.")
+            raise ValueError(
+                "Custom sequence must be specified for custom sequence retry pattern."
+            )
         return self.retry_context.config.custom_sequence
 
     def _calculate_delays(self):
@@ -655,7 +779,9 @@ class RetryStrategy:
             "controlled_flow": controlled_flow,
         }
 
-        action: Optional[Callable[[], List[float]]] = pattern_actions.get(self.retry_context.config.retry_pattern)
+        action: Optional[Callable[[], List[float]]] = pattern_actions.get(
+            self.retry_context.config.retry_pattern
+        )
         if action:
             self.retry_context.delays = action()
         else:
@@ -669,7 +795,9 @@ class RetryStrategy:
         )
 
 
-def retry_on(exceptions: Union[Type[E], Tuple[Type[E], ...]], **kwargs: Any) -> Callable:
+def retry(
+    exceptions: Union[Type[E], Tuple[Type[E], ...]], **kwargs: Any
+) -> Callable:
     def _validate_exceptions(exc: Type[E]) -> None:
         if not issubclass(exc, Exception):
             raise ValueError("exception must subclass Exception")
