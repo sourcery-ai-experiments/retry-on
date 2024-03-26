@@ -21,10 +21,10 @@ pip install retry-on
 
 ### Basic Usage
 
-To use the retry mechanism, decorate your function with `@retry_on` and specify the exceptions to retry on, along with any configuration parameters.
+To use the retry mechanism, decorate your function with `@retry` and specify the exceptions to retry on, along with any configuration parameters.
 
 ```python
-from retry_on import retry_on_exception as retry
+from retry_on import retry
 
 @retry(ValueError, max_retries=3, retry_pattern='exponential')
 async def example_async_function():
