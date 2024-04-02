@@ -20,7 +20,7 @@ from typing import (
 )
 from types import TracebackType
 
-from src.retry_on.utilities.logging import get_logger, logging
+from src.retry_on.logging import get_logger, logging
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -89,14 +89,20 @@ class RetryConfig:
 
     def _set_fallback_retry_pattern_properies(self, strategy) -> None:
         if strategy not in self.SUPPORTED_RETRY_PATTERNS:
-            raise ValueError(f"Unsupported retry pattern while setting fallback retry stratergy: {strategy}")
+            raise ValueError(
+                "Unsupported retry pattern while setting "
+                f"fallback retry stratergy: {strategy}"
+            )
         for prop in self.FALLBACK_RETRY_PATTERN_DEFAULT_PROPERTIES[strategy]:
             if getattr(self, prop) is None:
                 setattr(self, prop, self.FALLBACK_RETRY_PATTERN_DEFAULT_PROPERTIES[strategy][prop])
 
     def _set_fallback_retry_pattern(self, strategy) -> None:
         if strategy not in self.SUPPORTED_RETRY_PATTERNS:
-            raise ValueError(f"Unsupported retry pattern while setting fallback retry stratergy: {strategy}")
+            raise ValueError(
+                "Unsupported retry pattern while setting "
+                f"fallback retry stratergy: {strategy}"
+            )
         self._set_fallback_retry_pattern_properies(strategy)
 
     @staticmethod
@@ -192,7 +198,10 @@ class RetryConfig:
         if value is not None and not isinstance(value, (int, float)):
             raise TypeError("rate_limit must be a float or integer")
         if value is not None and value <= 0:
-            raise ValueError("rate_limit must be a positive float or integer greater than zero if provided")
+            raise ValueError(
+                "rate_limit must be a positive float or integer "
+                "greater than zero if provided"
+            )
         self._rate_limit = value
 
     @property
@@ -264,7 +273,6 @@ class RetryConfig:
     @on_retry_callback.setter
     def on_retry_callback(self, value) -> None:
         if value is not None and not callable(value):
-            #self._on_retry_callback = self._on_retry_callback or None
             raise TypeError("on_retry_callback must be callable")
         self._on_retry_callback: Optional[Callable] = value
 
@@ -277,7 +285,10 @@ class RetryConfig:
         if value is not None and not isinstance(value, (int, float)):
             raise TypeError("function_timeout must be a float or integer")
         if value is not None and value <= 0:
-            raise ValueError("function_timeout must be a positive float or integer greater than zero if provided")
+            raise ValueError(
+                "function_timeout must be a positive float or integer "
+                "greater than zero if provided"
+            )
         self._function_timeout = value
 
     @property
@@ -326,7 +337,10 @@ class RetryConfig:
             raise ValueError(
                 "custom_sequence must be provided for custom_sequence retry pattern"
             )
-        if self.retry_pattern == "controlled_flow" and (self.burst_capacity is None or self.rate_limit is None):
+        if self.retry_pattern == "controlled_flow" and (
+            self.burst_capacity is None
+            or self.rate_limit is None
+        ):
             raise ValueError(
                 "burst_capacity and rate_limit must be provided for controlled_flow retry pattern"
             )
@@ -334,7 +348,11 @@ class RetryConfig:
             raise ValueError(
                 "fixed_delay must be provided for fixed retry pattern"
             )
-        if self.max_delay is not None and self.initial_delay is not None and self.max_delay < self.initial_delay:
+        if (
+            self.max_delay is not None
+            and self.initial_delay is not None
+            and self.max_delay < self.initial_delay
+        ):
             raise ValueError("max_delay must be greater than or equal to initial_delay")
 
     def _update_retry_pattern(self, new_retry_pattern: str) -> None:
@@ -380,6 +398,8 @@ class SharedSemaphore:
             yield self._executor
         except Exception as exception:
             raise exception
+        finally:
+            self._shutdown()
 
     @asynccontextmanager
     async def async_lock(self) -> AsyncGenerator[None, Any]:
@@ -389,7 +409,7 @@ class SharedSemaphore:
         finally:
             self._async_semaphore.release()
 
-    def shutdown(self):
+    def _shutdown(self):
         self._executor.shutdown(wait=True)
 
 
@@ -878,13 +898,11 @@ class RetryStrategy:
 
 def validate_exceptions(exc: Union[Type[E], Tuple[Type[E], ...]]) -> None:
     excs = (exc,) if isinstance(exc, type) else exc
-    errors = []
-
-    for exception in excs:
-        if not issubclass(exception, Exception):
-            errors.append(f"{exception} must subclass Exception")
-
-    if errors:
+    if errors := [
+        f"{exception} must subclass Exception"
+        for exception in excs
+        if not issubclass(exception, Exception)
+    ]:
         error_message = "\n".join(errors)
         raise ValueError(error_message)
 
