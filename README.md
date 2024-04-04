@@ -1,4 +1,4 @@
-# Advanced Retry Mechanism Library
+# Advanced Retry Mechanism Python Package
 
 This library offers sophisticated retry logic for both asynchronous and synchronous functions in Python, enabling developers to handle transient failures with customizable retry strategies, including controlled flow, fixed intervals, exponential backoff, and custom sequences. It integrates seamlessly with Python's asyncio and concurrent.futures for robust concurrency management and supports callback functions for additional processing upon retry.
 
