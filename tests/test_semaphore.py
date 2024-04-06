@@ -3,7 +3,7 @@ import time
 import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Optional, Coroutine, Any, Callable, Union
+from typing import Coroutine, Any, Callable, List, Union, NoReturn
 
 import pytest
 import aiohttp
@@ -13,15 +13,6 @@ from src.retry_on.retry import retry
 from src.retry_on.tasks import ConcurrencyManager
 from tests.utils import semaphore_factory  # pylint: disable=unused-import
 
-###################
-# FIXTURES AND SETUP
-
-#@pytest.fixture
-# def semaphore_factory() -> Callable[[int], ConcurrencyManager]:
-#     """Fixture factory for creating semaphore fixtures."""
-#     def _semaphore(max_workers: int) -> ConcurrencyManager:
-#         return ConcurrencyManager(max_workers=max_workers)
-#     return _semaphore
 
 ###################
 # SEMAPHORE INITIALIZATION
@@ -54,12 +45,14 @@ def test_semaphore_init(
 @pytest.mark.unit
 @pytest.mark.parametrize("max_workers", [2], ids=["2_workers"])
 @pytest.mark.asyncio
-async def test_semaphore_async_lock(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+async def test_semaphore_async_lock(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests async lock management in SharedSemaphore."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
     try:
-        # Attempt to acquire and release the semaphore to ensure proper functionality.
         async with semaphore.async_lock():
             pass
         async with semaphore.async_lock():
@@ -75,13 +68,15 @@ async def test_semaphore_async_lock(max_workers: int, semaphore_factory: Callabl
 
 @pytest.mark.unit
 @pytest.mark.parametrize("max_workers", [2], ids=["2_workers"])
-def test_semaphore_sync_lock(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+def test_semaphore_sync_lock(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests sync lock management in SharedSemaphore."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
     def task() -> None:
         with semaphore.executor_context() as executor:
-            # Attempt to acquire and release the semaphore to ensure proper functionality.
             executor.submit(lambda: None)
             executor.submit(lambda: None)
 
@@ -103,7 +98,10 @@ def test_semaphore_sync_lock(max_workers: int, semaphore_factory: Callable[[int]
 
 @pytest.mark.unit
 @pytest.mark.parametrize("max_workers", [2], ids=["2_workers"])
-def test_executor_context_manager_management(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+def test_executor_context_manager_management(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests executor context management within SharedSemaphore."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
@@ -123,8 +121,16 @@ def test_executor_context_manager_management(max_workers: int, semaphore_factory
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("max_workers, tasks", [(1, 3)], ids=["1_worker_3_tasks"])
-def test_executor_context_manager_execute_tasks(max_workers: int, tasks: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+@pytest.mark.parametrize(
+    "max_workers, tasks",
+    [(1, 3)],
+    ids=["1_worker_3_tasks"]
+)
+def test_executor_context_manager_execute_tasks(
+    max_workers: int,
+    tasks: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests task execution within SharedSemaphore's executor context."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
@@ -132,7 +138,7 @@ def test_executor_context_manager_execute_tasks(max_workers: int, tasks: int, se
         pass
 
     with semaphore.executor_context() as executor:
-        futures = [executor.submit(task) for _ in range(tasks)]
+        futures: List[Future] = [executor.submit(task) for _ in range(tasks)]
         for future in futures:
             future.result()
 
@@ -144,27 +150,37 @@ def test_executor_context_manager_execute_tasks(max_workers: int, tasks: int, se
 @pytest.mark.unit
 @pytest.mark.parametrize("max_workers", [3], ids=["3_workers"])
 @pytest.mark.asyncio
-async def test_semaphore_async_task_execution_of_failing_and_succeeding_tasks(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+async def test_semaphore_async_task_execution_of_failing_and_succeeding_tasks(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests direct interactions with semaphore and task execution."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
-    async def long_running_task() -> None:
+    async def long_running_task() -> NoReturn:
         async with semaphore.async_lock():
             await asyncio.sleep(0.1)
 
-    async def failing_task() -> None:
+    async def failing_task() -> NoReturn:
         async with semaphore.async_lock():
             raise ValueError("Simulated task failure")
 
     # Execute tasks with varying outcomes
-    tasks: list[Coroutine[Any, Any, None]] = [long_running_task(), failing_task(), long_running_task()]
+    tasks: List[Coroutine] = [
+        long_running_task(),
+        failing_task(),
+        long_running_task()
+    ]
     with pytest.raises(ValueError):
         await asyncio.gather(*tasks)
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("max_workers", [3], ids=["3_workers"])
-def test_semaphore_sync_task_execution_of_failing_and_succeeding_tasks(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+def test_semaphore_sync_task_execution_of_failing_and_succeeding_tasks(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests direct interactions with semaphore and task execution."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
@@ -177,7 +193,11 @@ def test_semaphore_sync_task_execution_of_failing_and_succeeding_tasks(max_worke
             raise ValueError("Simulated task failure")
 
     # Execute tasks with varying outcomes
-    task_list: list[Callable[[], None]] = [long_running_task, failing_task, long_running_task]
+    task_list: List[Callable] = [
+        long_running_task,
+        failing_task,
+        long_running_task
+    ]
     with pytest.raises(ValueError):
         for task in task_list:
             task()
@@ -187,16 +207,37 @@ def test_semaphore_sync_task_execution_of_failing_and_succeeding_tasks(max_worke
 # SEMAPHORE EXCEPTION HANDLING
 
 
-@pytest.mark.parametrize("max_workers, tasks", [(1, 1), (1, 2), (2, 2), (2, 3)], ids=["1_worker_1_task", "1_worker_2_tasks", "2_workers_2_tasks", "2_workers_3_tasks"])
+@pytest.mark.parametrize(
+    "max_workers, tasks",
+    [
+        (1, 1),
+        (1, 2),
+        (2, 2),
+        (2, 3)
+    ],
+    ids=[
+        "1_worker_1_task",
+        "1_worker_2_tasks",
+        "2_workers_2_tasks",
+        "2_workers_3_tasks"
+    ]
+)
 @pytest.mark.asyncio
-async def test_semaphore_exception_handling_during_async_tasks(max_workers: int, tasks: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
-    """Tests semaphore behavior when an exception is raised during task execution with multiple workers."""
+async def test_semaphore_exception_handling_during_async_tasks(
+    max_workers: int,
+    tasks: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
+    """Tests semaphore behavior when an exception is raised
+    during task execution with multiple workers."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
     async def task_that_raises_exception() -> None:
         raise ValueError("Simulated task failure")
 
-    task_list = [task_that_raises_exception() for _ in range(tasks)]
+    task_list: List[Coroutine] = [
+        task_that_raises_exception() for _ in range(tasks)
+    ]
     with pytest.raises(ValueError):
         await asyncio.gather(*task_list)
 
@@ -204,15 +245,36 @@ async def test_semaphore_exception_handling_during_async_tasks(max_workers: int,
         assert True
 
 
-@pytest.mark.parametrize("max_workers, tasks", [(1, 1), (1, 2), (2, 2), (2, 3)], ids=["1_worker_1_task", "1_worker_2_tasks", "2_workers_2_tasks", "2_workers_3_tasks"])
-def test_semaphore_exception_handling_during_sync_tasks(max_workers: int, tasks: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
-    """Tests semaphore behavior when an exception is raised during task execution with multiple workers."""
+@pytest.mark.parametrize(
+    "max_workers, tasks",
+    [
+        (1, 1),
+        (1, 2),
+        (2, 2),
+        (2, 3)
+    ],
+    ids=[
+        "1_worker_1_task",
+        "1_worker_2_tasks",
+        "2_workers_2_tasks",
+        "2_workers_3_tasks"
+    ]
+)
+def test_semaphore_exception_handling_during_sync_tasks(
+    max_workers: int,
+    tasks: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
+    """Tests semaphore behavior when an exception is raised
+    during task execution with multiple workers."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
     def task_that_raises_exception() -> None:
         raise ValueError("Simulated task failure")
 
-    task_list = [task_that_raises_exception for _ in range(tasks)]
+    task_list: List[Callable] = [
+        task_that_raises_exception for _ in range(tasks)
+    ]
     with semaphore.executor_context() as executor:
         futures = [executor.submit(task) for task in task_list]
         for future in futures:
@@ -229,8 +291,12 @@ def test_semaphore_exception_handling_during_sync_tasks(max_workers: int, tasks:
 
 @pytest.mark.unit
 @pytest.mark.parametrize("max_workers", [1], ids=["1_worker"])
-def test_executor_shutdown_behavior_and_flag(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
-    """Tests executor shutdown behavior and the accuracy of the is_shutdown flag."""
+def test_executor_shutdown_behavior_and_flag(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
+    """Tests executor shutdown behavior
+    and the accuracy of the is_shutdown flag."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
     def task() -> None:
@@ -255,7 +321,10 @@ def test_executor_shutdown_behavior_and_flag(max_workers: int, semaphore_factory
     [1, 1000000],
     ids=["1_worker", "1_million_workers"]
 )
-async def test_async_semaphore_locking_mechanics(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+async def test_async_semaphore_locking_mechanics(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests basic semaphore locking mechanics and edge cases."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
@@ -263,8 +332,10 @@ async def test_async_semaphore_locking_mechanics(max_workers: int, semaphore_fac
         value_before: int = semaphore.async_value
         async with semaphore.async_lock():
             await asyncio.sleep(0.1)
-            assert semaphore.async_value == value_before - 1, "Lock was not acquired correctly"
-        assert semaphore.async_value == value_before, "Lock was not released correctly"
+            assert semaphore.async_value == value_before - 1,\
+                "Lock was not acquired correctly"
+        assert semaphore.async_value == value_before,\
+            "Lock was not released correctly"
 
     await task()
 
@@ -275,7 +346,10 @@ async def test_async_semaphore_locking_mechanics(max_workers: int, semaphore_fac
     [1, 1000000],
     ids=["1_worker", "1_million_workers"]
 )
-def test_sync_semaphore_locking_mechanics(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+def test_sync_semaphore_locking_mechanics(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests basic semaphore locking mechanics and edge cases."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
@@ -283,16 +357,20 @@ def test_sync_semaphore_locking_mechanics(max_workers: int, semaphore_factory: C
         value_before: int = semaphore.sync_value
         with semaphore.executor_context() as executor:
             executor.submit(lambda: None)
-            assert semaphore.sync_value == value_before - 1, "Lock was not acquired correctly"
-        assert semaphore.sync_value == value_before, "Lock was not released correctly"
-
+            assert semaphore.sync_value == value_before - 1,\
+                "Lock was not acquired correctly"
+        assert semaphore.sync_value == value_before,\
+            "Lock was not released correctly"
     task()
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("max_workers", [2], ids=["2_workers"])
 @pytest.mark.asyncio
-async def test_async_nested_semaphore_lock_and_reentrancy(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+async def test_async_nested_semaphore_lock_and_reentrancy(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests nesting of semaphore async locks."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
@@ -302,12 +380,16 @@ async def test_async_nested_semaphore_lock_and_reentrancy(max_workers: int, sema
                 return "Nested lock acquired"
 
     result: str = await reentrant_task()
-    assert result == "Nested lock acquired", "Failed to re-acquire a lock in a nested context."
+    assert result == "Nested lock acquired",\
+        "Failed to re-acquire a lock in a nested context."
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("max_workers", [2], ids=["2_workers"])
-def test_sync_nested_semaphore_lock_and_reentrancy(max_workers: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+def test_sync_nested_semaphore_lock_and_reentrancy(
+    max_workers: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests basic semaphore locking mechanics in a synchronous context."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
 
@@ -319,20 +401,30 @@ def test_sync_nested_semaphore_lock_and_reentrancy(max_workers: int, semaphore_f
             return "Locks acquired and released"
 
     result: str = reentrant_task()
-    assert result == "Locks acquired and released", "Failed to acquire and release locks in a synchronous context."
+    assert result == "Locks acquired and released",\
+        "Failed to acquire and release locks in a synchronous context."
 
 ###################
 # SEMAPHORE CONCURRENCY AND THREADING
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("max_workers, tasks", [(3, 3)], ids=["3_workers_3_tasks"])
+@pytest.mark.parametrize(
+    "max_workers, tasks",
+    [(3, 3)],
+    ids=["3_workers_3_tasks"]
+)
 @pytest.mark.asyncio
-async def test_async_semaphore_concurrency_unique_executor(max_workers: int, tasks: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
-    """Tests semaphore concurrency with multiple worker threads in an async context."""
+async def test_async_semaphore_concurrency_unique_executor(
+    max_workers: int,
+    tasks: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
+    """Tests semaphore concurrency with multiple worker threads
+    in an async context."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
     event: asyncio.Event = asyncio.Event()
-    results: list = []
+    results: List = []
     counter: int = 0
 
     async def task() -> None:
@@ -344,7 +436,9 @@ async def test_async_semaphore_concurrency_unique_executor(max_workers: int, tas
                 event.set()
             await event.wait()
 
-    tasks_list: list[Coroutine[Any, Any, None]] = [task() for _ in range(tasks)]
+    tasks_list: List[Coroutine] = [
+        task() for _ in range(tasks)
+    ]
     await asyncio.gather(*tasks_list)
     unique_executors: int = len(set(results))
 
@@ -356,19 +450,27 @@ async def test_async_semaphore_concurrency_unique_executor(max_workers: int, tas
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("max_workers, tasks", [(3, 3)], ids=("3_workers_3_tasks",))
-def test_sync_semaphore_concurrency_unique_executor(max_workers: int, tasks: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+@pytest.mark.parametrize(
+    "max_workers, tasks",
+    [(3, 3)],
+    ids=("3_workers_3_tasks",)
+)
+def test_sync_semaphore_concurrency_unique_executor(
+    max_workers: int,
+    tasks: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests semaphore concurrency with multiple worker threads."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
     barrier: threading.Barrier = threading.Barrier(max_workers + 1)
-    results: list = []
+    results: List = []
 
     def task() -> None:
         with semaphore.executor_context() as executor:
             results.append(executor)
             barrier.wait()
 
-    threads: list[threading.Thread] = [
+    threads: List[threading.Thread] = [
         threading.Thread(target=task) for _ in range(tasks)
     ]
     for thread in threads:
@@ -455,12 +557,20 @@ def test_sync_semaphore_retry_logic_effectiveness_with_nested_contexts(
 
 @pytest.mark.slow
 @pytest.mark.performance
-@pytest.mark.parametrize("max_workers, tasks", [(10, 1000)], ids=["10_workers_1000_tasks"])
+@pytest.mark.parametrize(
+    "max_workers, tasks",
+    [(10, 1000)],
+    ids=["10_workers_1000_tasks"]
+)
 @pytest.mark.asyncio
-async def test_async_semaphore_performance_under_network_latency(max_workers: int, tasks: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+async def test_async_semaphore_performance_under_network_latency(
+    max_workers: int,
+    tasks: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests semaphore under high concurrency and stress conditions."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
-    results: list[bool] = []
+    results: List[bool] = []
 
     async def simulated_network_call() -> None:
         async with semaphore.async_lock():
@@ -468,18 +578,28 @@ async def test_async_semaphore_performance_under_network_latency(max_workers: in
             await asyncio.sleep(0.05)
             results.append(True)
 
-    task_list: list[Coroutine[Any, Any, None]] = [asyncio.create_task(simulated_network_call()) for _ in range(tasks)]
+    task_list: List[Coroutine[Any, Any, None]] = [
+        asyncio.create_task(simulated_network_call()) for _ in range(tasks)
+    ]
     await asyncio.gather(*task_list)
     assert len(results) == tasks, "Not all tasks completed successfully"
 
 
 @pytest.mark.slow
 @pytest.mark.performance
-@pytest.mark.parametrize("max_workers, tasks", [(10, 1000)], ids=["10_workers_1000_tasks"])
-def test_sync_semaphore_performance_under_network_latency(max_workers: int, tasks: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
+@pytest.mark.parametrize(
+    "max_workers, tasks",
+    [(10, 1000)],
+    ids=["10_workers_1000_tasks"]
+)
+def test_sync_semaphore_performance_under_network_latency(
+    max_workers: int,
+    tasks: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
     """Tests semaphore under high concurrency and stress conditions."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
-    results: list[bool] = []
+    results: List[bool] = []
 
     def simulated_network_call() -> None:
         with semaphore.executor_context():
@@ -489,7 +609,9 @@ def test_sync_semaphore_performance_under_network_latency(max_workers: int, task
 
     # Submit tasks through the semaphore's executor to manage concurrency
     with semaphore.executor_context() as executor:
-        futures: list[Future] = [executor.submit(simulated_network_call) for _ in range(tasks)]
+        futures: List[Future] = [
+            executor.submit(simulated_network_call) for _ in range(tasks)
+        ]
         for future in futures:
             future.result()  # Wait for the task to complete
 
@@ -528,25 +650,46 @@ async def test_async_retry_logic_performance_under_stress(
                 raise Exception("Simulated failure")
             successful_calls["total"] += 1
 
-    task_list: list[Coroutine[Any, Any, None]] = [unreliable_task() for _ in range(tasks)]
-    results: list = await asyncio.gather(*task_list, return_exceptions=True)
+    task_list: List[Coroutine] = [
+        unreliable_task() for _ in range(tasks)
+    ]
+    results: List[Union[Exception, None]] = await asyncio.gather(
+        *task_list,
+        return_exceptions=True
+    )
 
-    assert successful_calls["total"] == tasks/2, "Expected 50 successful results after retries."
+    assert successful_calls["total"] == tasks/2,\
+        "Expected 50 successful results after retries."
     for result in results:
-        assert result is None or isinstance(result, Exception), "Task did not complete as expected."
+        assert result is None or isinstance(result, Exception),\
+            "Task did not complete as expected."
 
 
 @pytest.mark.slow
 @pytest.mark.performance
 @pytest.mark.integration
-@pytest.mark.parametrize("max_workers, tasks", [(10, 1000)], ids=["10_workers_1_thousand_tasks"])
-def test_sync_retry_logic_performance_under_stress(max_workers: int, tasks: int, semaphore_factory: Callable[[int], ConcurrencyManager]) -> None:
-    """Tests the performance of the sync retry logic under stress conditions."""
+@pytest.mark.parametrize(
+    "max_workers, tasks",
+    [(10, 1000)],
+    ids=["10_workers_1_thousand_tasks"]
+)
+def test_sync_retry_logic_performance_under_stress(
+    max_workers: int,
+    tasks: int,
+    semaphore_factory: Callable[[int], ConcurrencyManager]
+) -> None:
+    """Tests the performance of the sync retry logic
+    under stress conditions."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
     successful_calls: dict[str, int] = {"total": 0}
     max_workers: int = semaphore.sync_max_workers
 
-    @retry(Exception, max_retries=1, initial_delay=0.001, concurrency_limit=max_workers)
+    @retry(
+        Exception,
+        max_retries=1,
+        initial_delay=0.001,
+        concurrency_limit=max_workers
+    )
     def unreliable_task():
         nonlocal successful_calls
         if successful_calls["total"] >= tasks/2:
@@ -556,10 +699,12 @@ def test_sync_retry_logic_performance_under_stress(max_workers: int, tasks: int,
 
     # Submit tasks through the semaphore's executor to manage concurrency
     with semaphore.executor_context() as executor:
-        futures: list[Future] = [executor.submit(unreliable_task) for _ in range(tasks)]
-    
-    results: list[Exception | None] = []
-    
+        futures: list[Future] = [
+            executor.submit(unreliable_task) for _ in range(tasks)
+        ]
+
+    results: List[Union[Exception, None]] = []
+
     for future in futures:
         try:
             results.append(future.result())
@@ -601,7 +746,7 @@ async def test_async_retry_logic_retries_all_tasks(
         attempts["total"] += 1
         raise Exception("Simulated task failure")
 
-    task_list: list[Coroutine] = \
+    task_list: List[Coroutine] = \
         [failing_task() for _ in range(tasks)]
 
     await asyncio.gather(
@@ -626,7 +771,7 @@ def test_sync_retry_logic_retries_all_tasks(
     tasks: int,
     semaphore_factory: Callable[[int], ConcurrencyManager]
 ) -> None:
-    """Tests concurrency and threading with a semaphore and retries in a 
+    """Tests concurrency and threading with a semaphore and retries in a
     synchronous context."""
     semaphore: ConcurrencyManager = semaphore_factory(max_workers)
     attempts: dict[str, int] = {"total": 0}
@@ -641,7 +786,7 @@ def test_sync_retry_logic_retries_all_tasks(
         attempts["total"] += 1
         raise Exception("Simulated task failure")
 
-    task_list: list[Callable[[], None]] = [failing_task for _ in range(tasks)]
+    task_list: List[Callable[[], None]] = [failing_task for _ in range(tasks)]
 
     # Submit tasks through the semaphore's executor to manage concurrency
     with semaphore.executor_context() as executor:
