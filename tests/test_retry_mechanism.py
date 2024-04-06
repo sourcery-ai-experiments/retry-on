@@ -259,14 +259,18 @@ async def test_retry_on_network_failure() -> None:
             ExceptionSimulator.create_rate_limit_error,
         ),
         (
-            {"max_retries": 3, "initial_delay": 0.1, "retry_pattern": "exponential"},
+            {
+                "max_retries": 3,
+                "initial_delay": 0.1,
+                "retry_pattern": "exponential"
+            },
             3,
             ExceptionSimulator.create_api_timeout_error,
         ),
         (
             {
                 "max_retries": 4,
-                "custom_sequence": [0.1, 0.2, 0.4],
+                "custom_sequence": (0.1, 0.2, 0.4),
                 "retry_pattern": "custom_sequence",
             },
             4,

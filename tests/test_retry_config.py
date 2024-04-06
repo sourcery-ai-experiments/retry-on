@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Tuple
 import pytest
 from src.retry_on.logging import logging
 from src.retry_on.retry import RetryConfig
@@ -19,7 +19,7 @@ def test_retry_config_validation():
     with pytest.raises(ValueError):
         RetryConfig(concurrency_limit=-1)
     with pytest.raises(ValueError):
-        RetryConfig(custom_sequence="not_a_list", retry_pattern="custom_sequence")
+        RetryConfig(custom_sequence="not_a_tuple", retry_pattern="custom_sequence")
 
 
 # Test Data for Happy Path, Edge Cases, and Error Cases
@@ -48,7 +48,7 @@ setter_test_data = [
     ('retry_pattern', 'exponential', None),
     ('linear_delay', 1.0, None),
     ('fixed_delay', 5.0, None),
-    ('custom_sequence', [1.0, 2.0, 3.0], None),
+    ('custom_sequence', (1.0, 2.0, 3.0), None),
     ('concurrency_limit', 10, None),
     ('function_timeout', 30.0, None),
     ('callback_timeout', 15.0, None),
@@ -63,7 +63,7 @@ setter_test_data = [
     ('retry_pattern', 'unsupported_pattern', ValueError),
     ('linear_delay', -1, ValueError),
     ('fixed_delay', -1, ValueError),
-    ('custom_sequence', ['invalid'], ValueError),
+    ('custom_sequence', ('invalid',), ValueError),
     ('concurrency_limit', -1, ValueError),
     ('function_timeout', -1, ValueError),
     ('callback_timeout', -1, ValueError),
@@ -95,15 +95,15 @@ def test_retry_config_setters_and_validations(attribute, value, exception):
 
 # Custom Sequence Handling Tests
 def test_valid_custom_sequence():
-    retry_config = RetryConfig(custom_sequence=[1, 2, 3])
-    cust_seq: list = retry_config.custom_sequence
-    assert cust_seq == [1.0, 2.0, 3.0], "Custom sequence not handled correctly."
+    retry_config = RetryConfig(custom_sequence=(1, 2, 3))
+    cust_seq: Tuple = retry_config.custom_sequence
+    assert cust_seq == (1.0, 2.0, 3.0), "Custom sequence not handled correctly."
 
 
 def test_invalid_custom_sequence_elements():
-    retry_config = RetryConfig(custom_sequence=[1, 'invalid', 3])
-    cust_seq: list = retry_config.custom_sequence
-    assert cust_seq == [1.0, 3.0], "Custom sequence not correctly filtered."
+    retry_config = RetryConfig(custom_sequence=(1, 'invalid', 3))
+    cust_seq: Tuple = retry_config.custom_sequence
+    assert cust_seq == (1.0, 3.0), "Custom sequence not correctly filtered."
 
 
 # Callback Validation Tests
@@ -136,11 +136,11 @@ def test_retry_config_with_dynamic_changes() -> None:
     config.max_delay = 20.0
     config.jitter = 0.2
     config.retry_pattern = "custom_sequence"
-    config.custom_sequence = [1, 2, 3]
+    config.custom_sequence = (1, 2, 3)
 
     assert config.max_retries == 5
     assert config.initial_delay == 2.0
     assert config.max_delay == 20.0
     assert config.jitter == 0.2
     assert config.retry_pattern == "custom_sequence"
-    assert config.custom_sequence == [1, 2, 3]
+    assert config.custom_sequence == (1, 2, 3)

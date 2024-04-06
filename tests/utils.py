@@ -1,3 +1,4 @@
+import pytest
 import io
 from typing import Generator, Literal, Optional, Any, Callable
 from contextlib import contextmanager
@@ -8,6 +9,8 @@ from openai import RateLimitError, APIError, APITimeoutError
 from src.retry_on.logging import logging
 from src.retry_on.retry import logger as retry_logger
 from src.retry_on.retry import RetryConfig, TaskManager
+from src.retry_on.retry import ConcurrencyManager
+
 
 #################################
 # Utility functions and classes
@@ -104,3 +107,11 @@ def transient_fail_func(max_failures: int = 1) -> Callable:
     # Return the synchronous function directly for synchronous contexts
     # and the async wrapper for asynchronous contexts
     return async_wrapper if TaskManager.is_async(func) else func
+
+
+@pytest.fixture
+def semaphore_factory() -> Callable[[int], ConcurrencyManager]:
+    """Fixture factory for creating semaphore fixtures."""
+    def _semaphore(max_workers: int) -> ConcurrencyManager:
+        return ConcurrencyManager(max_workers=max_workers)
+    return _semaphore

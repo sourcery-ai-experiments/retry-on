@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 from unittest.mock import patch
 import pytest
@@ -149,13 +149,14 @@ def test_retry_pattern_controlled_flow(
 
 
 @pytest.mark.parametrize(
-    "custom_sequence, expected, test_id",
+    "custom_sequence, expected",
     [
-        ([0.1, 0.2, 0.3], [0.1, 0.2, 0.3], "custom_sequence"),
+        ((0.1, 0.2, 0.3), (0.1, 0.2, 0.3)),
     ],
+    ids=("custom_sequence=(0.1, 0.2, 0.3)",)
 )
-def test_retry_pattern_custom_sequence(
-    custom_sequence: list[float], expected: list[float], test_id: str
+def test_retry_pattern_custom_sequence_correctly_initialized(
+    custom_sequence: Tuple[float], expected: Tuple[float]
 ) -> None:
     config = RetryConfig(
         custom_sequence=custom_sequence,
@@ -163,7 +164,7 @@ def test_retry_pattern_custom_sequence(
     )
     retry_context = RetryContext(Exception, config)
     result = retry_context.retry_strategy.custom_sequence()
-    assert result == expected, f"[{test_id}] Expected {expected} but got {result}"
+    assert result == expected, f"Expected {expected} but got {result}"
 
 
 @pytest.mark.asyncio
@@ -188,7 +189,7 @@ async def test_retry_pattern_application() -> None:
     @retry(
         ValueError,
         max_retries=max_retries,
-        custom_sequence=[0.1, 0.2, 0.4],
+        custom_sequence=(0.1, 0.2, 0.4),
         retry_pattern="custom_sequence",
     )
     async def custom_sequence_retry_task() -> Optional[None]:

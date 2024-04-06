@@ -1,3 +1,4 @@
+import pytest
 from setuptools import setup, find_packages
 
 setup(
@@ -18,4 +19,8 @@ setup(
     ],
     python_requires='>=3.8',
     install_requires=open('requirements.txt').read().splitlines(),
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest', 'pytest-asyncio'],
+    test_suite='pytest_discover',
+    cmdclass={'test': pytest},
 )
