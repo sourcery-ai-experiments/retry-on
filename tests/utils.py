@@ -93,7 +93,7 @@ def capture_logging(logger: logging.Logger = retry_logger) -> Generator[Any, Any
 def transient_fail_func(max_failures: int = 1) -> Callable:
     call_count: dict[str, int] = {"count": 0}
 
-    def func(*args, **kwargs) -> Literal["Success"]:
+    def func() -> Literal["Success"]:
         if call_count["count"] < max_failures:
             call_count["count"] += 1
             # Raise the custom exception instead of APIStatusError or similar
