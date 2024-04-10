@@ -55,45 +55,82 @@ class RetryConfig:
     def __init__(self, **kwargs):
         # Setting default values to improve developer experience
         self.max_retries = kwargs.get("max_retries", 3)
-        self.initial_delay = self._get_float_or_value(kwargs, "initial_delay", 2.0)
+        self.initial_delay = self._get_float_or_value(
+            kwargs,
+            "initial_delay",
+            2.0
+        )
         self.max_delay = self._get_float_or_value(kwargs, "max_delay", 60.0)
         self.jitter = self._get_float_or_value(kwargs, "jitter", 0.25)
-        self.burst_capacity = self._get_int_or_value(kwargs, "burst_capacity", 3)
+        self.burst_capacity = self._get_int_or_value(
+            kwargs,
+            "burst_capacity",
+            3
+        )
         self.rate_limit = self._get_float_or_value(kwargs, "rate_limit", 0.5)
         self.retry_pattern = kwargs.get("retry_pattern", "controlled_flow")
-        self.linear_delay = self._get_float_or_value(kwargs, "linear_delay", 0.0)
+        self.linear_delay = self._get_float_or_value(
+            kwargs,
+            "linear_delay",
+            0.0
+        )
         self.fixed_delay = self._get_float_or_value(kwargs, "fixed_delay", 5.0)
-        self.custom_sequence = self._get_custom_sequence(kwargs, "custom_sequence")
+        self.custom_sequence = self._get_custom_sequence(
+            kwargs,
+            "custom_sequence"
+        )
         self.log_level = kwargs.get("log_level", logging.ERROR)
-        self.concurrency_limit = self._get_int_or_value(kwargs, "concurrency_limit")
+        self.concurrency_limit = self._get_int_or_value(
+            kwargs,
+            "concurrency_limit"
+        )
         self.on_retry_callback = kwargs.get("on_retry_callback")
-        self.function_timeout = self._get_float_or_value(kwargs, "function_timeout")
-        self.callback_timeout = self._get_float_or_value(kwargs, "callback_timeout")
+        self.function_timeout = self._get_float_or_value(
+            kwargs,
+            "function_timeout"
+        )
+        self.callback_timeout = self._get_float_or_value(
+            kwargs,
+            "callback_timeout"
+        )
         self._ensure_retry_pattern()
         self._validate_attributes()
 
     def _set_fallback_retry_pattern_properies(self, strategy) -> None:
         if strategy not in self.SUPPORTED_RETRY_PATTERNS:
             raise ValueError(
-                "Unsupported retry pattern while setting "
-                f"fallback retry stratergy: {strategy}"
+                (
+                    "Unsupported retry pattern while setting "
+                    f"fallback retry stratergy: {strategy}"
+                )
             )
         for prop in self.RETRY_PATTERN_DEFAULT_VALUES[strategy]:
             if getattr(self, prop) is None:
-                setattr(self, prop, self.RETRY_PATTERN_DEFAULT_VALUES[strategy][prop])
+                setattr(
+                    self,
+                    prop,
+                    self.RETRY_PATTERN_DEFAULT_VALUES[strategy][prop]
+                )
 
     def _set_fallback_retry_pattern(self, strategy) -> None:
         if strategy not in self.SUPPORTED_RETRY_PATTERNS:
             raise ValueError(
-                "Unsupported retry pattern while setting "
-                f"fallback retry stratergy: {strategy}"
+                (
+                    "Unsupported retry pattern while setting "
+                    f"fallback retry stratergy: {strategy}"
+                )
             )
         self._set_fallback_retry_pattern_properies(strategy)
 
     @staticmethod
     def _get_float_or_value(kwargs, key, default=None) -> Optional[float]:
         value: Any = kwargs.get(key, default)
-        return value if value is None or isinstance(value, (float, int)) else default
+        return (
+            value if value is None
+            or
+            isinstance(value, (float, int))
+            else default
+        )
 
     @staticmethod
     def _get_int_or_value(kwargs, key, default=None) -> Optional[int]:
@@ -110,10 +147,17 @@ class RetryConfig:
         value: Any = kwargs.get(key)
         if isinstance(value, list):
             return (
-                tuple(float(element) for element in value if isinstance(element, (int, float)))
+                tuple(float(element)
+                      for element in value
+                      if isinstance(element, (int, float))
+                      )
             )
         if isinstance(value, tuple):
-            return [float(element) for element in value if isinstance(element, (int, float))]
+            return (
+                float(element)
+                for element in value
+                if isinstance(element, (int, float))
+            )
         return (float(value), ) if isinstance(value, (int, float)) else None
 
     @property
@@ -137,7 +181,9 @@ class RetryConfig:
         if value is not None and not isinstance(value, (int, float)):
             raise TypeError("initial_delay must be a float or integer")
         if value is not None and value < 0:
-            raise ValueError("initial_delay must be a positive number if provided")
+            raise ValueError(
+                "initial_delay must be a positive number if provided"
+            )
         self._initial_delay = value
 
     @property
@@ -149,7 +195,9 @@ class RetryConfig:
         if value is not None and not isinstance(value, (int, float)):
             raise TypeError("max_delay must be a float or integer")
         if value is not None and value < 0:
-            raise ValueError("max_delay must be a positive float or integer if provided")
+            raise ValueError(
+                "max_delay must be a positive float or integer if provided"
+            )
         self._max_delay = value
 
     @property
@@ -161,7 +209,9 @@ class RetryConfig:
         if value is not None and not isinstance(value, (int, float)):
             raise TypeError("jitter must be a float or integer")
         if value is not None and (value < 0.0 or value > 1.0):
-            raise ValueError("jitter must be a number between 0 and 1 if provided")
+            raise ValueError(
+                "jitter must be a number between 0 and 1 if provided"
+            )
         self._jitter = value
 
     @property
@@ -173,7 +223,9 @@ class RetryConfig:
         if value is not None and not isinstance(value, int):
             raise TypeError("burst_capacity must be an integer")
         if value is not None and value < 0:
-            raise ValueError("burst_capacity must be a positive integer if provided")
+            raise ValueError(
+                "burst_capacity must be a positive integer if provided"
+            )
         self._burst_capacity = value
 
     @property
@@ -201,7 +253,12 @@ class RetryConfig:
             raise TypeError("retry_pattern must be a string")
         if value not in self.SUPPORTED_RETRY_PATTERNS:
             raise ValueError(f"Unsupported retry_pattern: {value}")
-        if hasattr(self, '_retry_pattern') and getattr(self, '_retry_pattern', None) is not None:
+        if (
+            hasattr(self, '_retry_pattern')
+            and
+            getattr(self, '_retry_pattern', None) is not None
+            and value is not None
+        ):
             self._update_retry_pattern(value)
         self._retry_pattern = value
 
@@ -214,7 +271,9 @@ class RetryConfig:
         if value is not None and not isinstance(value, (int, float)):
             raise TypeError("linear_delay must be a float or integer")
         if value is not None and value < 0:
-            raise ValueError("linear_delay must be a positive float or integer if provided")
+            raise ValueError(
+                "linear_delay must be a positive float or integer if provided"
+            )
         self._linear_delay = value
 
     @property
@@ -237,9 +296,19 @@ class RetryConfig:
     def custom_sequence(self, value: Optional[Tuple[float]]) -> None:
         if value is not None and not isinstance(value, (list, tuple)):
             raise TypeError("custom_sequence must be a list or a tuple")
-        if value is not None and not all(isinstance(n, (int, float)) for n in value):
-            raise ValueError("custom_sequence elements must be floats or integers if provided")
-        self._custom_sequence = value if isinstance(value, tuple) else tuple(value) if value else None
+        if (
+            value is not None
+            and
+            not all(isinstance(n, (int, float)) for n in value)
+        ):
+            raise ValueError(
+                "custom_sequence elements must be "
+                "floats or integers if provided"
+            )
+        self._custom_sequence = (
+            value if isinstance(value, tuple)
+            else tuple(value) if value else None
+        )
 
     @property
     def concurrency_limit(self) -> Optional[int]:
@@ -250,7 +319,9 @@ class RetryConfig:
         if value is not None and not isinstance(value, int):
             raise TypeError("concurrency_limit must be an integer")
         if value is not None and value < 0:
-            raise ValueError("concurrency_limit must be a positive integer if provided")
+            raise ValueError(
+                "concurrency_limit must be a positive integer if provided"
+            )
         self._concurrency_limit = value
 
     @property
@@ -287,7 +358,10 @@ class RetryConfig:
         if value is not None and not isinstance(value, (int, float)):
             raise TypeError("callback_timeout must be a float or integer")
         if value is not None and value < 0:
-            raise ValueError("callback_timeout must be a positive float or integer if provided")
+            raise ValueError(
+                "callback_timeout must be a positive float or integer "
+                "if provided"
+            )
         self._callback_timeout = value
 
     @property
@@ -322,14 +396,16 @@ class RetryConfig:
             and self.custom_sequence is None
         ):
             raise ValueError(
-                "custom_sequence must be provided for custom_sequence retry pattern"
+                "custom_sequence must be provided "
+                "for custom_sequence retry pattern."
             )
         if self.retry_pattern == "controlled_flow" and (
             self.burst_capacity is None
             or self.rate_limit is None
         ):
             raise ValueError(
-                "burst_capacity and rate_limit must be provided for controlled_flow retry pattern"
+                "burst_capacity and rate_limit must be provided "
+                "for controlled_flow retry pattern."
             )
         if self.retry_pattern == "fixed" and self.fixed_delay is None:
             raise ValueError(
@@ -340,10 +416,14 @@ class RetryConfig:
             and self.initial_delay is not None
             and self.max_delay < self.initial_delay
         ):
-            raise ValueError("max_delay must be greater than or equal to initial_delay")
+            raise ValueError(
+                "max_delay must be greater than or equal to initial_delay"
+            )
 
     def _update_retry_pattern(self, new_retry_pattern: str) -> None:
-        default_properties = self.RETRY_PATTERN_DEFAULT_VALUES.get(new_retry_pattern)
+        default_properties = self.RETRY_PATTERN_DEFAULT_VALUES.get(
+            new_retry_pattern
+        )
         if default_properties is None:
             raise ValueError("Invalid retry pattern provided")
 
